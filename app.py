@@ -1,5 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session
 import json
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> 3c877500354ea1c07ce75e27f8da1411884d6311
 from datetime import datetime
 
 app = Flask(__name__)
@@ -263,5 +267,10 @@ def analyze_website():
     })
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     app.run(debug=True, port=5000)
+=======
+    port = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=port)
+>>>>>>> 3c877500354ea1c07ce75e27f8da1411884d6311
 

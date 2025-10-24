@@ -1,5 +1,6 @@
 // Global script for the Phishing Awareness Game
 
+<<<<<<< HEAD
 // Mobile Menu Toggle
 document.addEventListener('DOMContentLoaded', function() {
     const menuToggle = document.getElementById('menuToggle');
@@ -29,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+=======
+>>>>>>> 3c877500354ea1c07ce75e27f8da1411884d6311
 // Smooth scroll behavior
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {

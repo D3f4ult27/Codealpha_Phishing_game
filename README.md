@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 #  Phishing Awareness Game
+=======
+# Phishing Awareness Game
+>>>>>>> 3c877500354ea1c07ce75e27f8da1411884d6311
 
 An interactive educational web application designed to teach users about phishing attacks, social engineering tactics, and cybersecurity best practices.
 

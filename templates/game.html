@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Game - Phishing Awareness Game{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <div class="game-header">
+        <h2>Phishing Awareness Challenge</h2>
+        <div class="score-display">
+            <span>Score: <strong id="score">0</strong></span>
+            <span>Correct: <strong id="correct">0</strong>/<strong id="total">0</strong></span>
+        </div>
+    </div>
+
+    <!-- Game Mode Selection -->
+    <div id="modeSelection" class="mode-selection">
+        <h3>Choose a Game Mode</h3>
+        <div class="mode-buttons">
+            <button class="mode-btn" onclick="startQuiz()">
+                <div class="mode-icon">❓</div>
+                <div class="mode-name">Quiz Challenge</div>
+                <div class="mode-desc">Answer questions about phishing and security</div>
+            </button>
+            <button class="mode-btn" onclick="startEmailAnalysis()">
+                <div class="mode-icon">📧</div>
+                <div class="mode-name">Email Analysis</div>
+                <div class="mode-desc">Identify phishing emails</div>
+            </button>
+            <button class="mode-btn" onclick="startWebsiteAnalysis()">
+                <div class="mode-icon">🌐</div>
+                <div class="mode-name">Website Analysis</div>
+                <div class="mode-desc">Spot fake websites</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quiz Mode -->
+    <div id="quizMode" class="game-mode" style="display: none;">
+        <div class="quiz-container">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="quizContent"></div>
+        </div>
+    </div>
+
+    <!-- Email Analysis Mode -->
+    <div id="emailMode" class="game-mode" style="display: none;">
+        <div class="email-container">
+            <div id="emailContent"></div>
+        </div>
+    </div>
+
+    <!-- Website Analysis Mode -->
+    <div id="websiteMode" class="game-mode" style="display: none;">
+        <div class="website-container">
+            <div id="websiteContent"></div>
+        </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="results-screen" style="display: none;">
+        <div class="results-content">
+            <h2>Game Complete!</h2>
+            <div class="results-stats">
+                <div class="stat">
+                    <div class="stat-value" id="finalScore">0</div>
+                    <div class="stat-label">Final Score</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="finalCorrect">0</div>
+                    <div class="stat-label">Correct Answers</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="finalPercentage">0%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+            </div>
+            <div id="resultsFeedback" class="results-feedback"></div>
+            <button class="btn btn-primary" onclick="location.href='/game'">Play Again</button>
+            <button class="btn btn-secondary" onclick="location.href='/'">Back to Home</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameState = {
+        mode: null,
+        currentQuestion: 0,
+        questions: [],
+        score: 0,
+        correct: 0,
+        total: 0,
+        answered: []
+    };
+
+    function startQuiz() {
+        gameState.mode = 'quiz';
+        gameState.currentQuestion = 0;
+        gameState.score = 0;
+        gameState.correct = 0;
+        gameState.answered = [];
+        
+        fetch('/api/quiz')
+            .then(r => r.json())
+            .then(data => {
+                gameState.questions = data;
+                gameState.total = data.length;
+                document.getElementById('modeSelection').style.display = 'none';
+                document.getElementById('quizMode').style.display = 'block';
+                showQuizQuestion();
+            });
+    }
+
+    function startEmailAnalysis() {
+        gameState.mode = 'email';
+        gameState.currentQuestion = 0;
+        gameState.score = 0;
+        gameState.correct = 0;
+        gameState.answered = [];
+        
+        fetch('/api/email-examples')
+            .then(r => r.json())
+            .then(data => {
+                gameState.questions = data;
+                gameState.total = data.length;
+                document.getElementById('modeSelection').style.display = 'none';
+                document.getElementById('emailMode').style.display = 'block';
+                showEmailExample();
+            });
+    }
+
+    function startWebsiteAnalysis() {
+        gameState.mode = 'website';
+        gameState.currentQuestion = 0;
+        gameState.score = 0;
+        gameState.correct = 0;
+        gameState.answered = [];
+        
+        fetch('/api/website-examples')
+            .then(r => r.json())
+            .then(data => {
+                gameState.questions = data;
+                gameState.total = data.length;
+                document.getElementById('modeSelection').style.display = 'none';
+                document.getElementById('websiteMode').style.display = 'block';
+                showWebsiteExample();
+            });
+    }
+
+    function showQuizQuestion() {
+        if (gameState.currentQuestion >= gameState.questions.length) {
+            showResults();
+            return;
+        }
+
+        const q = gameState.questions[gameState.currentQuestion];
+        const progress = ((gameState.currentQuestion + 1) / gameState.total) * 100;
+        document.getElementById('progressFill').style.width = progress + '%';
+
+        let html = `
+            <div class="question-card">
+                <div class="question-header">
+                    <span class="question-number">Question ${gameState.currentQuestion + 1}/${gameState.total}</span>
+                    <span class="question-category">${q.category}</span>
+                </div>
+                <h3>${q.question}</h3>
+                <div class="options">
+        `;
+
+        q.options.forEach((option, idx) => {
+            html += `
+                <button class="option-btn" onclick="submitQuizAnswer(${q.id}, ${idx})">
+                    ${option}
+                </button>
+            `;
+        });
+
+        html += `</div></div>`;
+        document.getElementById('quizContent').innerHTML = html;
+        updateScore();
+    }
+
+    function submitQuizAnswer(questionId, selectedAnswer) {
+        fetch('/api/submit-answer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question_id: questionId, selected_answer: selectedAnswer})
+        })
+        .then(r => r.json())
+        .then(data => {
+            const isCorrect = data.is_correct;
+            if (isCorrect) {
+                gameState.score += 10;
+                gameState.correct++;
+            }
+            gameState.answered.push({correct: isCorrect, explanation: data.explanation});
+            gameState.currentQuestion++;
+            showQuizQuestion();
+        });
+    }
+
+    function showEmailExample() {
+        if (gameState.currentQuestion >= gameState.questions.length) {
+            showResults();
+            return;
+        }
+
+        const email = gameState.questions[gameState.currentQuestion];
+        const progress = ((gameState.currentQuestion + 1) / gameState.total) * 100;
+        document.getElementById('progressFill').style.width = progress + '%';
+
+        let html = `
+            <div class="email-card">
+                <div class="email-header">
+                    <div class="email-item"><strong>From:</strong> ${email.from}</div>
+                    <div class="email-item"><strong>Subject:</strong> ${email.subject}</div>
+                </div>
+                <div class="email-body">
+                    ${email.body.replace(/\n/g, '<br>')}
+                </div>
+                <div class="email-question">
+                    <p><strong>Is this a phishing email?</strong></p>
+                    <div class="email-buttons">
+                        <button class="btn btn-danger" onclick="submitEmailAnswer(${email.id}, true)">🚨 Phishing</button>
+                        <button class="btn btn-success" onclick="submitEmailAnswer(${email.id}, false)">✓ Legitimate</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('emailContent').innerHTML = html;
+        updateScore();
+    }
+
+    function submitEmailAnswer(emailId, isPhishing) {
+        fetch('/api/analyze-email', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email_id: emailId, is_phishing: isPhishing})
+        })
+        .then(r => r.json())
+        .then(data => {
+            const isCorrect = data.is_correct;
+            if (isCorrect) {
+                gameState.score += 10;
+                gameState.correct++;
+            }
+            gameState.answered.push({correct: isCorrect, explanation: data.explanation, details: data.red_flags});
+            gameState.currentQuestion++;
+            showEmailExample();
+        });
+    }
+
+    function showWebsiteExample() {
+        if (gameState.currentQuestion >= gameState.questions.length) {
+            showResults();
+            return;
+        }
+
+        const website = gameState.questions[gameState.currentQuestion];
+        const progress = ((gameState.currentQuestion + 1) / gameState.total) * 100;
+        document.getElementById('progressFill').style.width = progress + '%';
+
+        let html = `
+            <div class="website-card">
+                <div class="website-header">
+                    <h3>${website.name}</h3>
+                    <div class="website-url">${website.url}</div>
+                </div>
+                <div class="website-features">
+                    <h4>Features:</h4>
+                    <ul>
+        `;
+
+        website.features.forEach(feature => {
+            html += `<li>${feature}</li>`;
+        });
+
+        html += `
+                    </ul>
+                </div>
+                <div class="website-question">
+                    <p><strong>Is this a phishing website?</strong></p>
+                    <div class="website-buttons">
+                        <button class="btn btn-danger" onclick="submitWebsiteAnswer(${website.id}, true)">🚨 Phishing</button>
+                        <button class="btn btn-success" onclick="submitWebsiteAnswer(${website.id}, false)">✓ Legitimate</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('websiteContent').innerHTML = html;
+        updateScore();
+    }
+
+    function submitWebsiteAnswer(websiteId, isPhishing) {
+        fetch('/api/analyze-website', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({website_id: websiteId, is_phishing: isPhishing})
+        })
+        .then(r => r.json())
+        .then(data => {
+            const isCorrect = data.is_correct;
+            if (isCorrect) {
+                gameState.score += 10;
+                gameState.correct++;
+            }
+            gameState.answered.push({correct: isCorrect, explanation: data.explanation, details: data.features});
+            gameState.currentQuestion++;
+            showWebsiteExample();
+        });
+    }
+
+    function updateScore() {
+        document.getElementById('score').textContent = gameState.score;
+        document.getElementById('correct').textContent = gameState.correct;
+        document.getElementById('total').textContent = gameState.total;
+    }
+
+    function showResults() {
+        document.getElementById('quizMode').style.display = 'none';
+        document.getElementById('emailMode').style.display = 'none';
+        document.getElementById('websiteMode').style.display = 'none';
+        document.getElementById('resultsScreen').style.display = 'block';
+
+        const percentage = Math.round((gameState.correct / gameState.total) * 100);
+        document.getElementById('finalScore').textContent = gameState.score;
+        document.getElementById('finalCorrect').textContent = gameState.correct;
+        document.getElementById('finalPercentage').textContent = percentage + '%';
+
+        let feedback = '';
+        if (percentage === 100) {
+            feedback = '🏆 Perfect! You are a phishing detection expert!';
+        } else if (percentage >= 80) {
+            feedback = '🎉 Excellent! You have strong phishing awareness skills.';
+        } else if (percentage >= 60) {
+            feedback = '👍 Good job! Keep learning to improve your skills.';
+        } else {
+            feedback = '📚 Keep practicing! Review the materials and try again.';
+        }
+
+        document.getElementById('resultsFeedback').innerHTML = `<p>${feedback}</p>`;
+    }
+</script>
+{% endblock %}
+

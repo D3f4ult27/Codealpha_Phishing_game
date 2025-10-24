@@ -1,7 +1,4 @@
 Flask==2.3.3
 Werkzeug==2.3.7
-<<<<<<< HEAD
-=======
 gunicorn
->>>>>>> 3c877500354ea1c07ce75e27f8da1411884d6311
 
